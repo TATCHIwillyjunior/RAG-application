@@ -20,6 +20,13 @@ __pycache__/
 # ChromaDB persistent storage
 chroma_db/
 
+# Node.js
+frontend/node_modules/
+frontend/.next/
+frontend/next-env.d.ts
+frontend/tsconfig.tsbuildinfo
+frontend/.env*.local
+
 # OS/editor files
 .DS_Store
 .vscode/

@@ -1,0 +1,42 @@
+[
+  {
+    "question": "How much water does the Vellora Duo water tank hold?",
+    "expected_source": "vellora-duo-espresso-machine.txt",
+    "expected_text": "water tank (1.8 litres)"
+  },
+  {
+    "question": "Which kinds of coffee beans should not be used?",
+    "expected_source": "vellora-duo-espresso-machine.txt",
+    "expected_text": "caramelised, flavoured or oily beans"
+  },
+  {
+    "question": "What should I do before cleaning the machine?",
+    "expected_source": "vellora-duo-espresso-machine.txt",
+    "expected_text": "Unplug the machine before cleaning it"
+  },
+  {
+    "question": "What does error E36 mean and how do I fix it?",
+    "expected_source": "vellora-duo-espresso-machine.txt",
+    "expected_text": "E36 - Frothing head blocked"
+  },
+  {
+    "question": "How do I make two cups at once?",
+    "expected_source": "vellora-duo-espresso-machine.txt",
+    "expected_text": "Press the button twice within two seconds"
+  },
+  {
+    "question": "Why should I only adjust the grinder while it is operating?",
+    "expected_source": "vellora-duo-espresso-machine.txt",
+    "expected_text": "Turn the adjuster only while the grinder is running"
+  },
+  {
+    "question": "What should I do if dried milk is blocking the foaming part?",
+    "expected_source": "vellora-duo-espresso-machine.txt",
+    "expected_text": "E36 - Frothing head blocked"
+  },
+  {
+    "question": "What is S3?",
+    "expected_source": null,
+    "expected_text": null
+  }
+]

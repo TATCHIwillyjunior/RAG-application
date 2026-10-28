@@ -1,7 +1,9 @@
 import os
+from pathlib import Path
 from openai import OpenAI
 from dotenv import load_dotenv
 
+PROJECT_DIR = Path(__file__).resolve().parent
 
 # This example demonstrates a simple "Needle in a Haystack" scenario,
 # where we have a large context of text (the "haystack")
@@ -17,10 +19,14 @@ from dotenv import load_dotenv
 # The size of the context and the number of tokens in the prompt may also affect your rate limit usage.
 
 # Load environment variables from .env file
-load_dotenv()
+load_dotenv(PROJECT_DIR / ".env")
 
 # The client gets the API key from the environment variable `GOOGLE_API_KEY`.
 api_key = os.getenv("GOOGLE_API_KEY")
+if not api_key:
+    raise RuntimeError(
+        "GOOGLE_API_KEY is missing. Add it to the project's .env file or set it in the environment."
+    )
 
 # Create an OpenAI client pointing to Google's OpenAI-compatible endpoint.
 # Google's Gemini API supports the OpenAI API format (alpha/beta).
@@ -58,7 +64,9 @@ STREAM_ON = True
 # without actually finding the specific information about Denis.
 
 crime_and_punishment_text = ""
-with open("docs/CrimeAndPunishment.txt", "r", encoding="utf-8") as f:
+with (PROJECT_DIR / "docs" / "CrimeAndPunishment.txt").open(
+    "r", encoding="utf-8"
+) as f:
     crime_and_punishment_text = f.read()
 
 # Create a truncated version of the text to ensure it fits the context window size chosen above

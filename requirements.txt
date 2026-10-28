@@ -1,5 +1,10 @@
 python-dotenv
 requests
-openai>=1.0.0
-chromadb
-sentence-transformers
+openai>=1.0.0,<2.0.0
+httpx>=0.27,<0.28
+chromadb>=0.6,<2
+# Kept for the original ask_rag_google.py console experiment.
+sentence-transformers>=3,<6
+fastapi>=0.115,<1
+uvicorn[standard]>=0.30,<1
+pydantic>=2.7,<3
