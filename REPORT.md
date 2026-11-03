@@ -1,12 +1,12 @@
 # V1 and V2 report
 
-> Complete the team fields and record observed evaluation/failure results before submission. No team identities or unrun test results are filled in on the team's behalf.
+> This is an individual project. The contributor's name still needs to be added before submission.
 
 ## Team details
 
 | Member | Contribution |
 |---|---|
-| [Fill in] | [Fill in] |
+| Individual project (name to add) | Sole contributor |
 
 ## Decision log
 
@@ -37,16 +37,17 @@ The run found two answerable-question retrieval misses: the water-tank capacity 
 |---|---|---|
 | Ask about a fact absent from the selected corpus (for example, “What is S3?” against the current documents). | Say the selected documents do not provide relevant evidence; do not make a factual claim without support. | In the retrieval baseline, no passages survived the 0.75 distance cutoff for “What is S3?” (abstention pass). The Gemini answer path was not exercised. |
 | Ask a question whose expected passage is not among the top five. | Return relevant evidence when available, or abstain rather than rely on unrelated chunks. | “How much water does the Vellora Duo water tank hold?”: the expected chunk ranked 11th at distance 0.8073, beyond the 0.75 cutoff. “What does error E36 mean and how do I fix it?”: the expected chunk ranked 20th at distance 0.7195, so it was below the top-five retrieval limit despite passing the cutoff. Both were Recall@5 misses. |
-| Ask with Gemini unavailable or the API key invalid. | Return an actionable provider error; the UI remains usable. | Not exercised in this baseline run. |
-| Run the original `ask_rag_google.py` console demo where Windows Application Control blocks the SciPy DLL used by Sentence Transformers. | The original console script cannot initialize its embedding model; use an approved Python environment. The V1 web app uses Chroma's ONNX `all-MiniLM-L6-v2` embedding implementation instead. | This environment blocked SciPy `_flapack` with an Application Control policy error in the original console dependency. The V1 app's ONNX runtime behavior has not been measured here. |
-| Change chunk settings or edit a source file. | Build/use the index for the new content/settings; older indexes must not be mistaken for the current one. | Not exercised in this baseline run. |
-| Upload an unsupported file or attempt a path-like filename. | Reject the input and keep files confined to the document library. | Not exercised in this baseline run. |
+| Ask with Gemini unavailable or the API key invalid. | Return an actionable provider error; the UI remains usable. | With `GOOGLE_API_KEY` blank, `POST /api/ask` returned HTTP 503 with “Gemini is not configured. Add a valid GOOGLE_API_KEY to the project .env file.” No Gemini request was sent. The browser UI was not exercised. |
+| Run the original `ask_rag_google.py` console demo where Windows Application Control blocks the SciPy DLL used by Sentence Transformers. | The original console script cannot initialize its embedding model; the V1 web app can use its Chroma ONNX embedding implementation instead. | This environment blocked SciPy `_flapack` with an Application Control policy error in the original console dependency. V1 API retrieval using Chroma ONNX succeeded for both 800- and 400-character chunk settings. |
+| Change chunk settings or edit a source file. | Build/use the index for the new content/settings; older indexes must not be mistaken for the current one. | `POST /api/search` succeeded at chunk sizes 800 and 400. Chroma stored separate collections with the corresponding chunk-size metadata. Source-file edits were not exercised. |
+| Upload an unsupported file or attempt a path-like filename. | Reject the input and keep files confined to the document library. | Upload attempts for `not-supported.pdf` and `..\\escape.txt` both returned HTTP 400. |
+| Delete a document after indexing it. | Remove the document and its vector indexes together. | A temporary validation document indexed successfully. DELETE returned HTTP 204, removed the file, and removed its indexes. The first check exposed a Chroma `list_collections()` compatibility issue (the installed version returns collection objects); this was fixed and the check then passed. |
 
 ## Submission checklist
 
-- [ ] Fill in team member names and contributions.
+- [ ] Add the sole contributor's name (contribution recorded as sole contributor).
 - [x] Run and record the retrieval baseline.
-- [ ] Test and record anticipated failure cases.
+- [x] Run and record the authorized local API failure checks.
 - [ ] Review the final report with every team member.
 - [ ] Commit and create the required `v1` Git tag after the team approves the submission.
 

@@ -225,9 +225,13 @@ def retrieve_passages(
 def delete_document_indexes(filename: str) -> None:
     try:
         client = get_chroma_client()
-        for collection_name in client.list_collections():
-            collection = client.get_collection(name=collection_name)
-            metadata = collection.metadata or {}
+        for collection in client.list_collections():
+            if isinstance(collection, str):
+                collection_name = collection
+                metadata = client.get_collection(name=collection_name).metadata or {}
+            else:
+                collection_name = collection.name
+                metadata = collection.metadata or {}
             if metadata.get("filename") == filename:
                 client.delete_collection(name=collection_name)
     except (chromadb.errors.ChromaError, OSError, RuntimeError) as error:
