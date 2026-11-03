@@ -1,12 +1,12 @@
 # V1 and V2 report
 
-> This is an individual project. The contributor's name still needs to be added before submission.
+> This is an individual project.
 
 ## Team details
 
 | Member | Contribution |
 |---|---|
-| Individual project (name to add) | Sole contributor |
+| Willy | Sole contributor |
 
 ## Decision log
 
@@ -45,7 +45,7 @@ The run found two answerable-question retrieval misses: the water-tank capacity 
 
 ## Submission checklist
 
-- [ ] Add the sole contributor's name (contribution recorded as sole contributor).
+- [x] Record the sole contributor and contribution.
 - [x] Run and record the retrieval baseline.
 - [x] Run and record the authorized local API failure checks.
 - [ ] Review the final report with every team member.
