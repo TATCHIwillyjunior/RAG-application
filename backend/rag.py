@@ -340,7 +340,7 @@ def generate_no_context_answer(question: str) -> str:
 
 
 def judge_no_context_answer(
-    question: str, answer: str, expected_answer: str
+    question: str, answer: str, expected_answer: str, answerable: bool
 ) -> dict[str, Any]:
     try:
         response = get_client().chat.completions.create(
@@ -349,11 +349,16 @@ def judge_no_context_answer(
                 {
                     "role": "user",
                     "content": (
-                        "You are evaluating a no-context answer against a reference answer. "
-                        "Return only JSON with boolean `correct` and a brief `reason`. "
-                        "For unanswerable questions, mark correct only if the answer clearly "
-                        "says the requested fact is not available or unknown. Do not reward "
-                        "plausible unsupported specifics.\n"
+                        "Evaluate whether this answer from general knowledge matches the "
+                        "reference, without using retrieval. Return only JSON with boolean "
+                        "`correct` and a brief `reason`.\n"
+                        f"Answerable from the corpus: {str(answerable).lower()}.\n"
+                        "If answerable is true, mark correct only when the candidate gives "
+                        "the expected fact; an abstention such as 'I do not know' is incorrect. "
+                        "Do not call the question unanswerable just because no context was "
+                        "provided. If answerable is false, mark correct only when the candidate "
+                        "clearly says the requested fact is unavailable or unknown. Do not "
+                        "reward plausible unsupported specifics.\n"
                         f"Question: {question}\n"
                         f"Reference answer: {expected_answer}\n"
                         f"Candidate answer without retrieval: {answer}"

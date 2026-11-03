@@ -186,6 +186,7 @@ def run_retrieval_evaluation(
             "metrics": _metric_values(question, passages),
             "retrieved_passages": [
                 {
+                    "id": passage.id,
                     "filename": passage.filename,
                     "chunk_index": passage.chunk_index,
                     "start_char": passage.start_char,
@@ -230,7 +231,10 @@ def run_no_context_evaluation(corpus_id: str) -> dict[str, Any]:
     for question in questions:
         answer = rag.generate_no_context_answer(question["question"])
         judgment = rag.judge_no_context_answer(
-            question["question"], answer, question["expected_answer"]
+            question["question"],
+            answer,
+            question["expected_answer"],
+            question["answerable"],
         )
         rows.append(
             {

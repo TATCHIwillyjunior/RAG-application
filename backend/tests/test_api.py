@@ -13,10 +13,15 @@ class ApiTests(unittest.TestCase):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.documents_dir = Path(self.temp_dir.name)
         self.documents_patch = patch.object(main, "DOCUMENTS_DIR", self.documents_dir)
+        self.corpora_patch = patch.dict(
+            rag.CORPORA, {"project-docs": self.documents_dir}
+        )
         self.documents_patch.start()
+        self.corpora_patch.start()
         self.client = TestClient(main.app)
 
     def tearDown(self) -> None:
+        self.corpora_patch.stop()
         self.documents_patch.stop()
         self.temp_dir.cleanup()
 
@@ -49,7 +54,7 @@ class ApiTests(unittest.TestCase):
             deleted = self.client.delete("/api/documents/new-note.txt")
 
         self.assertEqual(deleted.status_code, 204)
-        delete_indexes.assert_called_once_with("new-note.txt")
+        delete_indexes.assert_called_once_with("new-note.txt", "project-docs")
         self.assertFalse((self.documents_dir / "new-note.txt").exists())
 
     def test_rejects_path_like_and_unsupported_filenames(self) -> None:

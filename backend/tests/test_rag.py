@@ -1,7 +1,8 @@
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from types import SimpleNamespace
+from unittest.mock import Mock, patch
 
 from backend import rag
 from backend.rag import split_into_chunks
@@ -32,7 +33,7 @@ class RAGCoreTests(unittest.TestCase):
             (documents_dir / "manual.txt").write_text("Manual text.", encoding="utf-8")
             with self.assertLogs(rag.logger, level="ERROR"):
                 with (
-                    patch.object(rag, "DOCUMENTS_DIR", documents_dir),
+                    patch.dict(rag.CORPORA, {"project-docs": documents_dir}),
                     patch.object(
                         rag,
                         "_load_or_create_collection",
@@ -47,6 +48,44 @@ class RAGCoreTests(unittest.TestCase):
                         overlap_percent=10,
                         top_k=5,
                     )
+
+    def test_no_context_judge_uses_corpus_answerability(self) -> None:
+        for answerable, result in ((True, False), (False, True)):
+            with self.subTest(answerable=answerable):
+                create_completion = Mock(
+                    return_value=SimpleNamespace(
+                        choices=[
+                            SimpleNamespace(
+                                message=SimpleNamespace(
+                                    content=(
+                                        '{"correct": false, "reason": "No answer."}'
+                                        if answerable
+                                        else '{"correct": true, "reason": "Abstained."}'
+                                    )
+                                )
+                            )
+                        ]
+                    )
+                )
+                client = SimpleNamespace(
+                    chat=SimpleNamespace(
+                        completions=SimpleNamespace(create=create_completion)
+                    )
+                )
+                with patch.object(rag, "get_client", return_value=client):
+                    judgment = rag.judge_no_context_answer(
+                        "What is the fact?",
+                        "I do not know.",
+                        "The fact is seven.",
+                        answerable,
+                    )
+
+                prompt = create_completion.call_args.kwargs["messages"][0]["content"]
+                self.assertIn(
+                    f"Answerable from the corpus: {str(answerable).lower()}.",
+                    prompt,
+                )
+                self.assertEqual(judgment["correct"], result)
 
 
 if __name__ == "__main__":

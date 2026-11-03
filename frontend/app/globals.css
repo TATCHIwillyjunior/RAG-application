@@ -17,6 +17,7 @@
 body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--sans); }
 button, input, textarea { font: inherit; }
 button { cursor: pointer; }
+.about-message { max-width: 1200px; margin: 12vh auto; padding: 0 56px; font-size: clamp(40px, 8vw, 104px); font-weight: 600; line-height: 1.05; letter-spacing: -3px; }
 .shell { max-width: 1440px; min-height: 100vh; padding: 0 56px 36px; margin: auto; }
 .topbar { height: 74px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); }
 .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); font-size: 19px; font-weight: 700; letter-spacing: -.8px; }
