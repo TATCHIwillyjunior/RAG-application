@@ -81,7 +81,23 @@ The retrieval runs expose candidate misses, but the project team should inspect 
 | Kestrel KB | `20261103T105209Z-a5b19862`, 400 / 10% | q08: KST-5031 two-hop escalation question | Evidence recall is 0 at k=10; retrieved passages include the error-code runbook entry but do not match either expected evidence quote. | [Team: inspect saved passages and record diagnosis/change.] |
 | Vellora Duo | `20261103T105307Z-0517ed24`, 400 / 10% | v01: water tank capacity | Evidence recall is 0 at k=10; retrieved top passages concern troubleshooting, warranty, filter, and descaling, not the 1.8-litre capacity fact. | [Team: inspect saved passages and record diagnosis/change.] |
 
-No-context checks and generated answers issue Gemini API requests and have not yet been run. Use the UI checkbox or the CLI `--no-context` / `--generate-answers` option only when ready to consume API quota. Model-judged correctness is a prediction; review it against each reference and record the team's assessment. No manual grades have been recorded yet.
+Gemini-backed evaluations were run on 2026-11-03 using `gemini-3.5-flash-lite`. Grounded-answer generation completed for all ten questions under both chunk configurations for both corpora:
+
+| Corpus | Configuration | Run ID |
+|---|---|---|
+| Kestrel KB | 800 / 10% | `20261103T122933Z-79d8bf99` |
+| Kestrel KB | 400 / 10% | `20261103T123029Z-e38d3762` |
+| Vellora Duo | 800 / 10% | `20261103T123336Z-4c69f0c2` |
+| Vellora Duo | 400 / 10% | `20261103T123509Z-9a78ef72` |
+
+The JSONL results contain the generated answers and validated citation IDs; they have not been manually graded. No-context answer-and-judge checks also completed for all ten questions in each corpus:
+
+| Corpus | Run ID | Model-judged correct |
+|---|---|---|
+| Kestrel KB | `20261103T123132Z-3b5ba05c` | 7/10 (70%) |
+| Vellora Duo | `20261103T123627Z-e39b5db6` | 7/10 (70%) |
+
+Model-judged correctness is a prediction, not a human assessment. Review each result against its reference and record representative manual grades before submission. No manual grades have been recorded yet.
 
 ### V2 submission checklist
 
@@ -89,8 +105,9 @@ No-context checks and generated answers issue Gemini API requests and have not y
 - [x] Run retrieval evaluation on both corpora using at least two configurations.
 - [x] Save overall and per-question-type metrics and retrieved evidence under `evaluation/results/`.
 - [ ] Team review and diagnosis of the recorded retrieval misses.
-- [ ] Run and review no-context checks for each question in both sets.
-- [ ] Generate answers where desired and manually grade representative results.
+- [x] Run no-context checks for each question in both sets.
+- [x] Generate grounded answers for both corpora under both chunk configurations.
+- [ ] Review model-judged no-context checks and manually grade representative generated answers.
 - [ ] Record and diagnose one retrieval miss per V2 corpus in the table above.
 - [ ] Review the final V2 report before submission.
 - [ ] Create the required `v2` Git tag after the team approves the submission.
