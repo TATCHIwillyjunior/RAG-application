@@ -107,12 +107,12 @@ The smaller chunks help Vellora's split-answer and vocabulary questions at large
 
 ### Words-mode retrieval diagnoses
 
-The following observations come from `/api/words/coverage` and `/api/words/search` at 400 / 10%, then comparison with the saved ranked passages. This is an assistant-assisted draft; the project team must verify the observations and rewrite the final report in its own words.
+The following observations come from `/api/words/coverage` and `/api/words/search` at 400 / 10%, then comparison with the saved ranked passages. Willy confirmed the Kestrel q08 diagnosis as accurate and accepted the improved Vellora v01 diagnosis as a working draft. These assistant-assisted notes still need to be rewritten in the project team's own words for the final report.
 
 | Corpus | Run ID/configuration | Missed question | Retrieved evidence and observed failure | Evidence-based diagnosis and candidate change (team review required) |
 |---|---|---|---|---|
 | Kestrel KB | `20261103T105209Z-a5b19862`, 400 / 10% | q08: KST-5031 two-hop escalation question | No question terms are absent, but `support` occurs in 30 chunks and `team` in 12; `KST-5031` occurs once (in two overlapping chunks). The top ten retrieve the error-code passage at rank 1, but not the Service Catalog mapping. At 800 / 10%, only one of two expected evidence quotes is found even at k=10. | The question requires KST-5031 → postroom → Messaging/channel, but does not name the bridge term `postroom`; the 400-character split also separates part of the runbook evidence across chunks 16–17. A follow-up retrieval using the first-hop service name, or a hybrid/entity-aware retrieval step, is a candidate change to test. |
-| Vellora Duo | `20261103T105307Z-0517ed24`, 400 / 10% (also missed at 800 / 10%) | v01: water tank capacity | The question term `capacity` is absent from the corpus. `water` appears in 42 chunks and `tank` in 20; `litres` appears in only 3 chunks but is not in the question. Neither configuration retrieves the expected chunk in its top ten; the 400 / 10% top ten focus on troubleshooting and maintenance. | The query uses broad, frequent terms and does not use the manual's `1.8 litres` wording. Test a controlled synonym/query expansion for capacity/volume/litres or hybrid lexical retrieval; do not silently change the fixed evaluation question. |
+| Vellora Duo | `20261103T105307Z-0517ed24`, 400 / 10% (also missed at 800 / 10%) | v01: water tank capacity | The question term `capacity` is absent from the corpus. `water` appears in 42 chunks and `tank` in 20; `litres` appears in only 3 chunks but is not in the question. Neither configuration retrieves the expected chunk in its top ten; the 400 / 10% top ten focus on troubleshooting and maintenance. | The frequent query terms provide weak lexical discrimination, while the rare term `litres` is absent from the question. This is consistent with poor lexical alignment, though it does not prove the cause. Test unit/synonym expansion (`volume`, `litres`) and hybrid retrieval as separate variants, without inserting the expected answer; compare the target rank and aggregate metrics while keeping the evaluation question unchanged. |
 
 Gemini-backed evaluations were run on 2026-11-03 using `gemini-3.5-flash-lite`. Grounded-answer generation completed for all ten questions under both chunk configurations for both corpora:
 
@@ -142,13 +142,13 @@ The Kestrel KB 800 / 10% run (`20261103T122933Z-79d8bf99`) is selected for hand 
 - **unsupported**: makes a material factual claim that its cited/retrieved passages do not support, even if the claim sounds plausible.
 - For an unanswerable question, only a clear statement that the answer is not in the documents is correct; an invented answer is wrong or unsupported.
 
-The grading review is assistant-assisted and must be checked by the project team before submission; the persistent `manual_grade` fields and comments identify the proposed result for each question.
+Willy reviewed and confirmed all ten proposed grade labels without changes. The per-question rationale comments remain assistant-assisted evidence notes; use the team's own wording when presenting the grading analysis in the final report.
 
 | Selected run | Correct | Partial | Wrong | Unsupported |
 |---|---:|---:|---:|---:|
 | Kestrel KB, 800 / 10%, `20261103T122933Z-79d8bf99` | 4 | 6 | 0 | 0 |
 
-These are pre-grades, not a substitute for the team's hand review. The JSONL comments explain each proposed label; confirm or change them before submission.
+The labels are team-confirmed. The JSONL comments explain the assistant-assisted rationale behind each label; rewrite the grading analysis in the team's own words before submission.
 
 ### V2 submission checklist
 
@@ -156,11 +156,11 @@ These are pre-grades, not a substitute for the team's hand review. The JSONL com
 - [x] Run retrieval evaluation on both corpora using at least two configurations.
 - [x] Save overall and per-question-type metrics and retrieved evidence under `evaluation/results/`.
 - [x] Inspect and draft a Words-based diagnosis for one retrieval miss per corpus.
-- [ ] Team verify and own the final miss diagnoses.
+- [ ] Rewrite both miss diagnoses in the team's own words.
 - [x] Run no-context checks for each question in both sets.
 - [x] Generate grounded answers for both corpora under both chunk configurations.
 - [x] Review answerability-aware no-context predictions and record the keep decision.
 - [x] Record assistant-assisted answer-grade proposals for the selected configuration.
-- [ ] Team hand-review and confirm or replace the proposed grades.
-- [ ] Review the final V2 report before submission.
+- [x] Team hand-review and confirm the proposed grade labels (Willy confirmed all ten).
+- [ ] Rewrite the assistant-assisted V2 report analysis in the team's own words and review the final report before submission.
 - [ ] Create the required `v2` Git tag after the team approves the submission.
