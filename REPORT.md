@@ -63,22 +63,34 @@ python -m backend.evaluate_retrieval --corpus all
 
 Result JSONL files are saved in `evaluation/results/`. Each run records its configuration, retrieved chunks, per-question evidence match metrics, overall metrics, and metrics by question type. Retrieval hit rate and mean evidence recall are reported at k=1, 3, 5, and 10; unanswerable cases are omitted from those retrieval scores. The frontend can run the same configurations and save manual grades (`correct`, `partial`, `wrong`, or `unsupported`) back into the corresponding result file.
 
-No measured V2 results or team-authored miss diagnoses are filled in here. Run the evaluations, inspect the saved chunks, then have the team record and diagnose at least one retrieval miss for each of the two V2 corpora:
+The retrieval evaluation was run on 2026-11-03 for both corpora using the default 800-character/10%-overlap configuration and a 400-character/10%-overlap comparison. The four saved JSONL files contain each question, its ranked retrieved passages, evidence matches, and per-type scores. The table reports the aggregate Hit Rate / Mean Evidence Recall at each cutoff:
+
+| Corpus | Configuration | Run ID | @1 | @3 | @5 | @10 |
+|---|---|---|---|---|---|---|
+| Kestrel KB | 800 / 10% | `20261103T105117Z-e79e26b4` | 62.5% / 40.6% | 87.5% / 81.3% | 87.5% / 81.3% | 100.0% / 93.8% |
+| Kestrel KB | 400 / 10% | `20261103T105209Z-a5b19862` | 25.0% / 12.5% | 75.0% / 65.6% | 75.0% / 71.9% | 75.0% / 71.9% |
+| Vellora Duo | 800 / 10% | `20261103T105255Z-13971cd6` | 44.4% / 44.4% | 66.7% / 66.7% | 66.7% / 66.7% | 66.7% / 66.7% |
+| Vellora Duo | 400 / 10% | `20261103T105307Z-0517ed24` | 44.4% / 38.9% | 66.7% / 61.1% | 66.7% / 61.1% | 77.8% / 77.8% |
+
+Unanswerable questions are excluded from these scores. The `by_type` section in each JSONL run contains the breakdown by question type. The measurements show that chunk configuration changes results; neither configuration dominates at every cutoff on both corpora.
+
+The retrieval runs expose candidate misses, but the project team should inspect the saved passages and supply its own diagnosis and proposed change before submission. Two observed cases to review:
 
 | Corpus | Run ID/configuration | Missed question | Retrieved evidence and observed failure | Team diagnosis and proposed change |
 |---|---|---|---|---|
-| Kestrel KB | [Run and fill in] | [Fill in] | [Inspect result JSONL and fill in] | [Team diagnosis] |
-| Vellora Duo | [Run and fill in] | [Fill in] | [Inspect result JSONL and fill in] | [Team diagnosis] |
+| Kestrel KB | `20261103T105209Z-a5b19862`, 400 / 10% | q08: KST-5031 two-hop escalation question | Evidence recall is 0 at k=10; retrieved passages include the error-code runbook entry but do not match either expected evidence quote. | [Team: inspect saved passages and record diagnosis/change.] |
+| Vellora Duo | `20261103T105307Z-0517ed24`, 400 / 10% | v01: water tank capacity | Evidence recall is 0 at k=10; retrieved top passages concern troubleshooting, warranty, filter, and descaling, not the 1.8-litre capacity fact. | [Team: inspect saved passages and record diagnosis/change.] |
 
-No-context checks and generated answers issue Gemini API requests. Use the UI checkbox or the CLI `--no-context` / `--generate-answers` option only when ready to consume API quota. Model-judged correctness is a prediction; review it against each reference and record the team’s assessment.
+No-context checks and generated answers issue Gemini API requests and have not yet been run. Use the UI checkbox or the CLI `--no-context` / `--generate-answers` option only when ready to consume API quota. Model-judged correctness is a prediction; review it against each reference and record the team's assessment. No manual grades have been recorded yet.
 
 ### V2 submission checklist
 
-- [ ] Confirm at least 10 questions are present in each V2 corpus JSONL set.
-- [ ] Run retrieval evaluation on both corpora using at least two configurations.
-- [ ] Review saved overall and per-question-type metrics and retrieve evidence for misses.
+- [x] Confirm at least 10 questions are present in each V2 corpus JSONL set.
+- [x] Run retrieval evaluation on both corpora using at least two configurations.
+- [x] Save overall and per-question-type metrics and retrieved evidence under `evaluation/results/`.
+- [ ] Team review and diagnosis of the recorded retrieval misses.
 - [ ] Run and review no-context checks for each question in both sets.
 - [ ] Generate answers where desired and manually grade representative results.
 - [ ] Record and diagnose one retrieval miss per V2 corpus in the table above.
-- [ ] Review the final report with every team member.
+- [ ] Review the final V2 report before submission.
 - [ ] Create the required `v2` Git tag after the team approves the submission.

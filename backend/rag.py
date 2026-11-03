@@ -1,4 +1,5 @@
 import hashlib
+import json
 import logging
 import os
 import re
@@ -16,7 +17,12 @@ from chromadb.utils.embedding_functions import DefaultEmbeddingFunction
 
 PROJECT_DIR = Path(__file__).resolve().parents[1]
 DOCUMENTS_DIR = PROJECT_DIR / "docs"
-CHROMA_DIR = PROJECT_DIR / "chroma_db" / "v1_app"
+CORPORA = {
+    "kestrel": PROJECT_DIR / "corpora" / "kestrel" / "docs",
+    "vellora": PROJECT_DIR / "corpora" / "vellora" / "docs",
+    "project-docs": DOCUMENTS_DIR,
+}
+CHROMA_DIR = PROJECT_DIR / "chroma_db" / "v2_app"
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 DEFAULT_MODEL = "gemini-3.5-flash-lite"
 MAX_DOCUMENT_BYTES = 5 * 1024 * 1024
@@ -65,6 +71,27 @@ def get_embedding_function() -> DefaultEmbeddingFunction:
     return DefaultEmbeddingFunction()
 
 
+def get_corpus_dir(corpus_id: str) -> Path:
+    try:
+        return CORPORA[corpus_id]
+    except KeyError as error:
+        raise ValueError(f"Unknown corpus '{corpus_id}'.") from error
+
+
+def list_corpus_documents(corpus_id: str) -> list[Path]:
+    directory = get_corpus_dir(corpus_id)
+    if not directory.is_dir():
+        return []
+    return sorted(
+        (
+            path
+            for path in directory.iterdir()
+            if path.is_file() and path.suffix.lower() in {".txt", ".md"}
+        ),
+        key=lambda path: path.name.casefold(),
+    )
+
+
 @lru_cache(maxsize=1)
 def get_chroma_client() -> chromadb.PersistentClient:
     CHROMA_DIR.mkdir(parents=True, exist_ok=True)
@@ -102,20 +129,30 @@ def split_into_chunks(
 
 
 def _collection_name(
-    filename: str, content_digest: str, chunk_size: int, overlap_percent: int
+    corpus_id: str,
+    filename: str,
+    content_digest: str,
+    chunk_size: int,
+    overlap_percent: int,
 ) -> str:
     identity = (
-        f"{filename}:{content_digest}:{EMBEDDING_MODEL}:"
+        f"{corpus_id}:{filename}:{content_digest}:{EMBEDDING_MODEL}:"
         f"{chunk_size}:{overlap_percent}"
     )
-    return "v1_" + hashlib.sha256(identity.encode("utf-8")).hexdigest()[:40]
+    return "v2_" + hashlib.sha256(identity.encode("utf-8")).hexdigest()[:40]
 
 
 def _load_or_create_collection(
-    filename: str, text: str, chunk_size: int, overlap_percent: int
+    corpus_id: str,
+    filename: str,
+    text: str,
+    chunk_size: int,
+    overlap_percent: int,
 ) -> Any:
     digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
-    name = _collection_name(filename, digest, chunk_size, overlap_percent)
+    name = _collection_name(
+        corpus_id, filename, digest, chunk_size, overlap_percent
+    )
     client = get_chroma_client()
     try:
         return client.get_collection(
@@ -128,6 +165,7 @@ def _load_or_create_collection(
         name=name,
         embedding_function=get_embedding_function(),
         metadata={
+            "corpus_id": corpus_id,
             "filename": filename,
             "content_sha256": digest,
             "embedding_model": EMBEDDING_MODEL,
@@ -164,6 +202,7 @@ def retrieve_passages(
     chunk_size: int,
     overlap_percent: int,
     top_k: int,
+    corpus_id: str = "project-docs",
 ) -> list[Passage]:
     if not question.strip():
         raise ValueError("Enter a question.")
@@ -173,14 +212,15 @@ def retrieve_passages(
         raise ValueError("Top-k must be between 1 and 10.")
 
     try:
+        documents_dir = get_corpus_dir(corpus_id)
         passages: list[Passage] = []
         for filename in filenames:
-            path = DOCUMENTS_DIR / filename
+            path = documents_dir / filename
             if not path.is_file():
                 raise FileNotFoundError(f"Document '{filename}' no longer exists.")
             text = path.read_text(encoding="utf-8")
             collection = _load_or_create_collection(
-                filename, text, chunk_size, overlap_percent
+                corpus_id, filename, text, chunk_size, overlap_percent
             )
             count = collection.count()
             if count == 0:
@@ -210,7 +250,7 @@ def retrieve_passages(
                         distance=float(distance),
                     )
                 )
-    except FileNotFoundError:
+    except (FileNotFoundError, ValueError):
         raise
     except (chromadb.errors.ChromaError, ImportError, OSError, RuntimeError) as error:
         logger.exception("Local retrieval failed")
@@ -222,7 +262,9 @@ def retrieve_passages(
     return passages[:top_k]
 
 
-def delete_document_indexes(filename: str) -> None:
+def delete_document_indexes(
+    filename: str, corpus_id: str = "project-docs"
+) -> None:
     try:
         client = get_chroma_client()
         for collection in client.list_collections():
@@ -232,13 +274,117 @@ def delete_document_indexes(filename: str) -> None:
             else:
                 collection_name = collection.name
                 metadata = collection.metadata or {}
-            if metadata.get("filename") == filename:
+            if (
+                metadata.get("corpus_id", "project-docs") == corpus_id
+                and metadata.get("filename") == filename
+            ):
                 client.delete_collection(name=collection_name)
     except (chromadb.errors.ChromaError, OSError, RuntimeError) as error:
         logger.exception("Could not remove local indexes for %s", filename)
         raise RetrievalUnavailable(
             "The local vector index could not be updated. The document was not deleted; check the local index and retry."
         ) from error
+
+
+def get_document_chunks(
+    filenames: list[str], chunk_size: int, overlap_percent: int, corpus_id: str
+) -> list[dict[str, Any]]:
+    documents_dir = get_corpus_dir(corpus_id)
+    chunks: list[dict[str, Any]] = []
+    for filename in filenames:
+        path = documents_dir / filename
+        if not path.is_file():
+            raise FileNotFoundError(f"Document '{filename}' no longer exists.")
+        text = path.read_text(encoding="utf-8")
+        for index, (start, end, chunk_text) in enumerate(
+            split_into_chunks(text, chunk_size, overlap_percent)
+        ):
+            chunks.append(
+                {
+                    "filename": filename,
+                    "chunk_index": index,
+                    "start_char": start,
+                    "end_char": end,
+                    "text": chunk_text,
+                }
+            )
+    return chunks
+
+
+def generate_no_context_answer(question: str) -> str:
+    try:
+        response = get_client().chat.completions.create(
+            model=os.getenv("GEMINI_MODEL", DEFAULT_MODEL),
+            messages=[
+                {
+                    "role": "user",
+                    "content": (
+                        "Answer the following question from your general knowledge. "
+                        "Do not use any documents or retrieval. Give a concise answer, "
+                        "and say if you do not know.\n\nQuestion: "
+                        f"{question}"
+                    ),
+                }
+            ],
+        )
+    except ModelUnavailable:
+        raise
+    except APIError as error:
+        logger.exception("Gemini no-context request failed")
+        raise ModelUnavailable(
+            "Gemini could not run the no-context check. Check the API key, model, quota, and network."
+        ) from error
+    if not response.choices or not response.choices[0].message.content:
+        raise InvalidModelResponse("Gemini returned no no-context answer.")
+    return response.choices[0].message.content.strip()
+
+
+def judge_no_context_answer(
+    question: str, answer: str, expected_answer: str
+) -> dict[str, Any]:
+    try:
+        response = get_client().chat.completions.create(
+            model=os.getenv("GEMINI_MODEL", DEFAULT_MODEL),
+            messages=[
+                {
+                    "role": "user",
+                    "content": (
+                        "You are evaluating a no-context answer against a reference answer. "
+                        "Return only JSON with boolean `correct` and a brief `reason`. "
+                        "For unanswerable questions, mark correct only if the answer clearly "
+                        "says the requested fact is not available or unknown. Do not reward "
+                        "plausible unsupported specifics.\n"
+                        f"Question: {question}\n"
+                        f"Reference answer: {expected_answer}\n"
+                        f"Candidate answer without retrieval: {answer}"
+                    ),
+                }
+            ],
+        )
+    except ModelUnavailable:
+        raise
+    except APIError as error:
+        logger.exception("Gemini no-context judge request failed")
+        raise ModelUnavailable(
+            "Gemini could not judge the no-context answer. Check the API key, model, quota, and network."
+        ) from error
+    content = response.choices[0].message.content if response.choices else None
+    if not content:
+        raise InvalidModelResponse("Gemini returned no no-context judge result.")
+    match = re.search(r"\{.*\}", content, flags=re.DOTALL)
+    if not match:
+        raise InvalidModelResponse("Gemini returned an invalid no-context judge result.")
+    try:
+        result = json.loads(match.group(0))
+    except json.JSONDecodeError as error:
+        raise InvalidModelResponse(
+            "Gemini returned invalid JSON for the no-context judge."
+        ) from error
+    if not isinstance(result, dict) or not isinstance(result.get("correct"), bool) or not isinstance(
+        result.get("reason"), str
+    ):
+        raise InvalidModelResponse("Gemini returned an invalid no-context judge schema.")
+    return result
 
 
 def generate_grounded_answer(question: str, passages: list[Passage]) -> GroundedAnswer:
